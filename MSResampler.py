@@ -6,8 +6,8 @@ import pylab
 
 def save_visibility_arrays (msname,arrays,column="CORRECTED_DATA"):
   """Saves a set of visibility arrays to the MS.
-  arrays is a list of (p,q,data) tuples, where p & q are antenna indices,
-  and data is the corresponding array of shape ntime,nfreq,ncorr.
+  arrays is a list of (p,q,dtimepq,data) tuples, where p & q are antenna indices,
+  and data is the corresponding array of shape ntime spectral windows,ntime,nfreq,ncorr.
   The shape must match the shape of the MS, or errors will result. 
   """
   # add the flagging column to the MS structure
