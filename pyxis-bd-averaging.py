@@ -187,31 +187,31 @@ def simulate_imaging_bd_3c147 (hiresms=None,inputcolumn="DATA",outputcolumn="COR
 	"""	
 
 	# make an instance of the class containing the method for bd-averaging
-#	mshi = MSResampler.MSResampler(hiresms+"/",column=inputcolumn,time0=time0,ntime=ntime,freq0=freq0,nfreq=nfreq)
+	mshi = MSResampler.MSResampler(hiresms+"/",column=inputcolumn,time0=time0,ntime=ntime,freq0=freq0,nfreq=nfreq)
 	# BD-averaging, giving the integration time of the shortest baseline, dtime and 
 	# the number of uv-frequency bins dfreq to average
-#	arrays = mshi.bd_averaging (dtime,dfreq)
+	arrays = mshi.bd_averaging (dtime,dfreq)
 	# arrays is of size (p,q,dtimepq,data)
 	# take the number of time bins of the longest baseline and make low res timeslots
-#	p,q,dtlong,arr = arrays[200] ;
-#	Ntime = arr.shape[1]#3238
-#	# take the integration time of the longest baseline and make low res integration time
-#	integration = dtlong;
+	p,q,dtlong,arr = arrays[200] ;
+	Ntime = arr.shape[1]#3238
+	# take the integration time of the longest baseline and make low res integration time
+	integration = dtlong;
 	# parameters for low res
-#	dec = "49.51.07.23356"
-#	ra =  "05:42:36.137916"
-#	nchan = arr.shape[2]*3;
-#	chanwidth = dfreq*1000000;
-#	starttime = "2013/01/27/01:00:28.5"
-#	antenna = "ANTENNA"
-#	startfq = 1329e6;
-#	namel = "3C147-lores"
+	dec = "49.51.07.23356"
+	ra =  "05:42:36.137916"
+	nchan = arr.shape[2]*3;
+	chanwidth = dfreq*1000000;
+	starttime = "2013/01/27/01:00:28.5"
+	antenna = "ANTENNA"
+	startfq = 1329e6;
+	namel = "3C147-lores"
 	
 	# make the measurment set corresponding to the low res 
-    #    lowresms = makems (name=namel,Ntime=Ntime,integration=integration,\
-    #  		dec=dec,ra=ra,startfq=startfq,nchan=nchan,chanwidth=chanwidth,starttime=starttime);
+        lowresms = makems (name=namel,Ntime=Ntime,integration=integration,\
+      		dec=dec,ra=ra,startfq=startfq,nchan=nchan,chanwidth=chanwidth,starttime=starttime);
 	# # save visibilities
-    #	MSResampler.save_visibility_arrays (lowresms,arrays,column=outputcolumn)
+    	MSResampler.save_visibility_arrays (lowresms,arrays,column=outputcolumn)
   	imager.npix= 2048
 	imager.cellsize = "2arcsec"
 	imager.stokes   = "I"
@@ -222,5 +222,5 @@ def simulate_imaging_bd_3c147 (hiresms=None,inputcolumn="DATA",outputcolumn="COR
 	#imager.threshold = "5mJy"
 	imager.CLEAN_ALGORITHM = "csclean"
 	
-	imager.make_image(msname = hiresms, column = 'CORRECTED_DATA',restore = True, dirty = False, weight = "natural");
+	imager.make_image(msname = lowresms, column = 'CORRECTED_DATA',restore = True, dirty = False, weight = "natural");
 
