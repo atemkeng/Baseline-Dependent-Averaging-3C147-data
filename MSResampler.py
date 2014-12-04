@@ -133,7 +133,8 @@ class MSResampler (object):
 		dfreqpq = dfreqpq+1 if dfreqpq%2==0 else dfreqpq
 		from time import gmtime, strftime
 		print """%s +++ Baseline Dependent Averaging: Baseline (%d,%d), integration =%ds,
-			 bandwidth =%.1fMHz this may take some time +++"""%(strftime("%Y-%m-%d %H:%M:%S", gmtime()),p,q,dtimepq,(dfreqpq*10))
+			bandwidth =%.1fMHz this may take 
+			some time +++"""%(strftime("%Y-%m-%d %H:%M:%S", gmtime()),p,q,dtimepq,(dfreqpq*10))
 		# number of spectral windows
 		nbsw = data_desc_id.max()+1;
                 
@@ -146,10 +147,14 @@ class MSResampler (object):
                         datacomid = datacom[data_desc_id==idw].copy()
                         flagrowpqid = flagrowpq[data_desc_id==idw].copy()
 			weightpqid = weightpq[data_desc_id==idw].copy()
-                        time0 = 0;
-                        time1 = time0 + dtimepq;
+                        #time0 = 0;
+                        #time1 = time0 + dtimepq;
                         # work across each spectral window for this baseline
-                        while dataid.shape[0]-time0 >= dtimepq:
+                        #while dataid.shape[0]-time0 >= dtimepq:
+			ntime = (dataid.shape[0]//dtimepq)*dtimepq
+			for time0 in range(0,ntime,dtimepq):
+			  # keep indice at the end of the compression range
+			  time1 = time0 + dtimepq;
                           # created three time slice; 
                           timeslicesw = slice(time0,time1)
                           timesliceflag1 = slice(time0,time0+(time1-time0)/2)
@@ -163,8 +168,8 @@ class MSResampler (object):
 			  weightpqid[timeslicedata,...] = (weightpqid[timeslicesw,...].sum(0)).copy()
                           flagrowpqid[timesliceflag1] = 1;
                           flagrowpqid[timesliceflag2] = 1;		
-                          time0 = time1;
-                          time1 = time0 + dtimepq;
+                          #time0 = time1;
+                          #time1 = time0 + dtimepq;
 	  		  # this is the last time slice, in the case we still have the rest of data less than dtimepq
                         if time0 < dataid.shape[0]:
                           timeslicesw = slice(time0,dataid.shape[0])
@@ -192,11 +197,13 @@ class MSResampler (object):
 	baseline dependent averaging across frequency, given 
 	the data for a baseline and the number of samples to average.
       """
-      freq0 = 0;
-      freq1 = freq0 + dfreq;
+      #freq0 = 0;
+      #freq1 = freq0 + dfreq;
       nfreq = (datafreq_pq.shape[1]//dfreq)*dfreq
-      while datafreq_pq.shape[1]-freq0 >= dfreq: 
-      #for freq0 in range(0,nfreq,dfreq):
+      #while datafreq_pq.shape[1]-freq0 >= dfreq: 
+      for freq0 in range(0,nfreq,dfreq):
+	# keep indice at the end of the compression range 
+	freq1 = freq0 + dfreq;
 	# prepare the samples to average freq0 + dfreq	
         freqslicesw = slice(freq0,freq1)
 	# prepare the flaging columns
@@ -205,8 +212,8 @@ class MSResampler (object):
         freqslicedata = slice(freq0+(freq1-freq0)/2,freq0+(freq1-freq0)/2 +1)
         data_avg_freq = datafreq_pq[:,freqslicesw,...].copy()
         datafreq_pq[:,freqslicedata,...] = (data_avg_freq.mean(1)).reshape(data_avg_freq.shape[0],1,data_avg_freq.shape[2])
-        freq0 = freq1;
-        freq1 = freq0 + dfreq;
+        #freq0 = freq1;
+        #freq1 = freq0 + dfreq;
         # flag here
       if freq0 < datafreq_pq.shape[1]:
       	freqslicesw = slice(freq0,datafreq_pq.shape[1])
