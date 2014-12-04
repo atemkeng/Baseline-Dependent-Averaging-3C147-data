@@ -45,14 +45,14 @@ def save_visibility_arrays (msname,arrays,column="CORRECTED_DATA"):
 
   # save the averaging data to the hard MS
   tab.putcol(column,data)
-  tab.putcol("FLAG_ROW",bitflagrow)
+  tab.putcol("FLAG_ROW",flagrow)
   tab.putcol("WEIGHT",weight)
   print "save succeded"
   tab.close();
 
 
 class MSResampler (object):
-    """Class for reading and resampling data from an MS"""
+    """iClass for reading and resampling data from an MS"""
 
     def __init__ (self,msname,column="DATA"):
       """Inits with given MS and column name.
