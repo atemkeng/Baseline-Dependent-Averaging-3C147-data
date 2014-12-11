@@ -38,8 +38,8 @@ def simulate_imaging_bd_3c147 (hiresms=None, loresms=None, inputcolumn="DATA", o
 	imager.weight   = "natural"
 	imager.wprojplanes = 128
 	#cleaning options
-	imager.niter = 10000000
-	#imager.threshold = "5mJy"
+	imager.niter = 1000
+	imager.threshold = "5mJy"
 	imager.CLEAN_ALGORITHM = "csclean"
 	
 	imager.make_image(msname = loresms, column = outputcolumn, restore = True, dirty = False,  weight = "natural");

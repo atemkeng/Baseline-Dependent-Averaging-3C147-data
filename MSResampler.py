@@ -28,6 +28,8 @@ def save_visibility_arrays (msname,arrays,column="CORRECTED_DATA"):
     #print"===== opening columns FLAG_ROW and WEIGHT ====="
     flagrow = tab.getcol("FLAG_ROW");
     weight = tab.getcol("WEIGHT")
+    flagfreq = tab.getcol("FLAG")
+    flagfreq.fill(0.)
     flagrow.fill(0);
     weight.fill(0.)
     print"===== FLAG_ROW and WEIGHT columns open successfuly ====="
@@ -37,16 +39,18 @@ def save_visibility_arrays (msname,arrays,column="CORRECTED_DATA"):
   from time import gmtime, strftime
 
   # run across the averaging data
-  for p,q,datacom,flagrowpq,weightpq in arrays:
+  for p,q,datacom,flagrowpq,weightpq,flagfreqpq in arrays:
      print "%s +++ saving bd-avg visibilities for baseline (%d,%d) +++"%(strftime("%Y-%m-%d %H:%M:%S", gmtime()),p,q)
      data[(a1==p)&(a2==q),...] = datacom.copy();
      flagrow[(a1==p)&(a2==q),...] = flagrowpq.copy();
      weight[(a1==p)&(a2==q),...] = weightpq.copy();
+     flagfreq[(a1==p)&(a2==q),...] = flagfreqpq.copy()
 
   # save the averaging data to the hard MS
   tab.putcol(column,data)
   tab.putcol("FLAG_ROW",flagrow)
   tab.putcol("WEIGHT",weight)
+  tab.putcol("FLAG",flagfreq)
   print "save succeded"
   tab.close();
 
@@ -68,6 +72,7 @@ class MSResampler (object):
       data = tab.getcol(column);
       data_desc_id = tab.getcol("DATA_DESC_ID")
       weight = tab.getcol("WEIGHT")
+      flagfreq = tab.getcol("FLAG")
       nfreq = data.shape[1]
 
       self.data = data.copy();
@@ -80,6 +85,7 @@ class MSResampler (object):
       self.ncorr = data.shape[2]
       self.nbins = data.shape[0]
       self.nfreq = nfreq
+      self.flagfreq = flagfreq.copy();
       self.UVW = tab.getcol("UVW")
 
       # get frequency and wavelength (per channel) from SPECTRAL_WINDOW subtable
@@ -108,6 +114,9 @@ class MSResampler (object):
           input_index = (self.A0==p)&(self.A1==q)
 	  # extract the data and the  spectral windows indexes for this baseline
           data = self.data[input_index].copy();
+	  # flagging frequency column
+	  flagfreqpq = self.flagfreq[input_index].copy();
+	  flagfreqpqkept = np.zeros_like(flagfreqpq)
           # output data
           datacom = np.zeros_like(data)
 	  # data description for this baseline
@@ -132,9 +141,8 @@ class MSResampler (object):
                 dtimepq = dtimepq+1 if dtimepq%2==0 else dtimepq
 		dfreqpq = dfreqpq+1 if dfreqpq%2==0 else dfreqpq
 		from time import gmtime, strftime
-		print """%s +++ Baseline Dependent Averaging: Baseline (%d,%d), integration =%ds,
-			bandwidth =%.1fMHz this may take 
-			some time +++"""%(strftime("%Y-%m-%d %H:%M:%S", gmtime()),p,q,dtimepq,(dfreqpq*10))
+		print """%s +++ Baseline Dependent Averaging: Baseline (%d,%d), integration =%ds, bandwidth =%.1fMHz 
+					this may take some time +++"""%(strftime("%Y-%m-%d %H:%M:%S", gmtime()),p,q,dtimepq,(dfreqpq*10))
 		# number of spectral windows
 		nbsw = data_desc_id.max()+1;
                 
@@ -147,58 +155,76 @@ class MSResampler (object):
                         datacomid = datacom[data_desc_id==idw].copy()
                         flagrowpqid = flagrowpq[data_desc_id==idw].copy()
 			weightpqid = weightpq[data_desc_id==idw].copy()
-                        #time0 = 0;
-                        #time1 = time0 + dtimepq;
+			flagfreqpqid = flagfreqpq[data_desc_id==idw].copy()
+			flagfreqpqkeptid = flagfreqpqkept[data_desc_id==idw].copy()
+                
                         # work across each spectral window for this baseline
-                        #while dataid.shape[0]-time0 >= dtimepq:
 			ntime = (dataid.shape[0]//dtimepq)*dtimepq
 			for time0 in range(0,ntime,dtimepq):
 			  # keep indice at the end of the compression range
 			  time1 = time0 + dtimepq;
                           # created three time slice; 
+			  # time slice for the overall date to average
                           timeslicesw = slice(time0,time1)
+			  # time slices for the left hand side and right hand side where to flag
                           timesliceflag1 = slice(time0,time0+(time1-time0)/2)
                           timesliceflag2 = slice(time0+(time1-time0)/2 +1,time1)
+			  # time slice where to save the average data
                           timeslicedata = slice(time0+(time1-time0)/2,time0+(time1-time0)/2 +1)
-                          datatoavg = dataid[timeslicesw].copy()#reshape((dtimepq,nfreq1,dfreq,self.ncorr))
+
+			  # extract visibilities to average
+                          datatoavg = dataid[timeslicesw].copy()
+			  # extract the hires flagging columns for this id
+			  flagfreqtoavg = flagfreqpqid[timeslicesw].copy()
+			 
 			  # average accros frequency here
-                          datatoavg = self.bd_averaging_frequency (datatoavg, dfreqpq)
+                          datatoavg, flagfreqtoavg = self.bd_averaging_frequency (datatoavg, flagfreqtoavg, dfreqpq)
 			  # average across time
 			  datacomid[timeslicedata,...] = (datatoavg.mean(0)).copy()
+			  # evaluate the new wait and save
 			  weightpqid[timeslicedata,...] = (weightpqid[timeslicesw,...].sum(0)).copy()
+			  # keep the new flagging information across frequencies
+			  flagfreqpqkeptid[timeslicesw,...] = flagfreqtoavg.copy()
+			  #flagfreqpqkeptid[timeslicedata,...][datacomid[timeslicedata,...]==0.] = 1
+			  # flag in time
                           flagrowpqid[timesliceflag1] = 1;
                           flagrowpqid[timesliceflag2] = 1;		
-                          #time0 = time1;
-                          #time1 = time0 + dtimepq;
 	  		  # this is the last time slice, in the case we still have the rest of data less than dtimepq
                         if time0 < dataid.shape[0]:
+			  # for exemple if dtime =10 and here dataid.shape[0]-time<dtime; 
                           timeslicesw = slice(time0,dataid.shape[0])
                           timesliceflag1 = slice(time0,time0+(dataid.shape[0]-time0)/2);
                           timesliceflag2 = slice(time0+(dataid.shape[0]-time0)/2 +1,dataid.shape[0]);
                           timeslicedata = slice(time0+(dataid.shape[0]-time0)/2, time0+(dataid.shape[0]-time0)/2 +1);
                           datatoavg = dataid[timeslicesw].copy()#reshape((dataid.shape[0]-time1,nfreq1,dfreq,self.ncorr))
-			  datatoavg = self.bd_averaging_frequency (datatoavg, dfreqpq)
+			  flagfreqtoavg = flagfreqpqid[timeslicesw].copy()
+			  datatoavg, flagfreqtoavg = self.bd_averaging_frequency (datatoavg, flagfreqtoavg, dfreqpq)
                           datacomid[timeslicedata,...] = (datatoavg.mean(0)).copy()
 			  weightpqid[timeslicedata,...] = (weightpqid[timeslicesw,...].sum(0)).copy()
+			  flagfreqpqkeptid[timeslicesw,...] = flagfreqtoavg.copy()
+			  #flagfreqpqkeptid[timeslicedata,...][datacomid[timeslicedata,...]==0.] = 1
                           flagrowpqid[timesliceflag1] = 1;
                           flagrowpqid[timesliceflag2] = 1;
-  
+			
+  			# keep informations for this baseline
                         datacom[data_desc_id==idw] = datacomid.copy();
                         flagrowpq[data_desc_id==idw] = flagrowpqid.copy()
 			weightpq[data_desc_id==idw] = weightpqid.copy()
+			flagfreqpqkept[data_desc_id==idw] = flagfreqpqid.copy()
           	# save the result
-                result.append((p,q,datacom,flagrowpq,weightpq));
+                result.append((p,q,datacom,flagrowpq,weightpq,flagfreqpqkept));
 
       return result;
 
 
-    def bd_averaging_frequency (self, datafreq_pq, dfreq):
+    def bd_averaging_frequency (self, datafreq_pq, flagfreqtoavg_pq, dfreq):
       """
 	baseline dependent averaging across frequency, given 
 	the data for a baseline and the number of samples to average.
       """
       #freq0 = 0;
       #freq1 = freq0 + dfreq;
+      flagfreqkept = np.zeros_like(flagfreqtoavg_pq)
       nfreq = (datafreq_pq.shape[1]//dfreq)*dfreq
       #while datafreq_pq.shape[1]-freq0 >= dfreq: 
       for freq0 in range(0,nfreq,dfreq):
@@ -211,16 +237,26 @@ class MSResampler (object):
         freqsliceflag2 = slice(freq0+(freq1-freq0)/2 +1,freq1)
         freqslicedata = slice(freq0+(freq1-freq0)/2,freq0+(freq1-freq0)/2 +1)
         data_avg_freq = datafreq_pq[:,freqslicesw,...].copy()
-        datafreq_pq[:,freqslicedata,...] = (data_avg_freq.mean(1)).reshape(data_avg_freq.shape[0],1,data_avg_freq.shape[2])
-        #freq0 = freq1;
-        #freq1 = freq0 + dfreq;
-        # flag here
+	flagfreqtoavg = flagfreqtoavg_pq[:,freqslicesw,...].copy()
+	flagfreqkept[:,freqsliceflag1,...] = 1;
+	flagfreqkept[:,freqsliceflag2,...] = 1;
+	
+	# average were the hires visibities are not flag. flagfreqtoavg is the mask, average where flagfreqtoavg is False
+        datafreq_pq[:,freqslicedata,...] = np.mean(data_avg_freq*(flagfreqtoavg==False),axis=(1))\
+					.reshape(data_avg_freq.shape[0],1,data_avg_freq.shape[2])
+        
       if freq0 < datafreq_pq.shape[1]:
       	freqslicesw = slice(freq0,datafreq_pq.shape[1])
       	freqsliceflag1 = slice(freq0,freq0+(datafreq_pq.shape[1]-freq0)/2);
       	freqsliceflag2 = slice(freq0+(datafreq_pq.shape[1]-freq0)/2 +1,datafreq_pq.shape[1]);
       	freqslicedata = slice(freq0+(datafreq_pq.shape[1]-freq0)/2, freq0+(datafreq_pq.shape[1]-freq0)/2 +1);
       	data_avg_freq = datafreq_pq[:,freqslicesw,...].copy()
-      	datafreq_pq[:,freqslicedata,...] = (data_avg_freq.mean(1)).reshape(data_avg_freq.shape[0],1,data_avg_freq.shape[2])
+	flagfreqtoavg = flagfreqtoavg_pq[:,freqslicesw,...].copy()
+	flagfreqkept[:,freqsliceflag1,...] = 1;
+        flagfreqkept[:,freqsliceflag2,...] = 1;
+
+	# average were the hires visibities are not flag. flagfreqtoavg is the mask, average where flagfreqtoavg is False
+      	datafreq_pq[:,freqslicedata,...] = np.mean(data_avg_freq*(flagfreqtoavg==False),axis=(1))\
+		.reshape(data_avg_freq.shape[0],1,data_avg_freq.shape[2])
           
-      return datafreq_pq
+      return datafreq_pq, flagfreqkept;
