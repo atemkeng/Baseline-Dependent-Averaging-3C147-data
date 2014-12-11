@@ -11,7 +11,7 @@ scp -f atemkeng@jake.ru.ac.za:/home/atemkeng/RealDATA/3C147-1425-NOAVG.MS $HOME
 
 3-) The imaging script ("pyxis-bd-averaging.py") is not well develloped, so you can use the normal imaging tools (lwimager,....) to work after bd-averaging.
 
-3-) A simple pyxis script is incoporate, use this like this: 
+4-) A simple pyxis script is incoporate, use this like this: 
 
 	pyxis simulate_imaging_bd_3c147[hiresms=3C147-1425-NOAVG.MS,loresms=3C147-1425-NOAVG.MS,dfreq=16,dtime=100,inputcolumn="DATA", outputcolumn="CORRECTED_DATA"]
 	
@@ -20,4 +20,4 @@ scp -f atemkeng@jake.ru.ac.za:/home/atemkeng/RealDATA/3C147-1425-NOAVG.MS $HOME
 	You might change dfreq and dtime as you want.
 
 
-4-) Send queries to m.atemkeng@gmail.com
+5-) Send queries to m.atemkeng@gmail.com
