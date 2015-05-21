@@ -215,8 +215,7 @@ class MSResampler (object):
 			flagfreqpqkept[data_desc_id==idw] = flagfreqpqid.copy()
           	# save the result
                 result.append((p,q,datacom,flagrowpq,weightpq,flagfreqpqkept));
-      np.save("lengthdtdf",lengthdtdf)
-      stop
+      
       return result;
 
 
