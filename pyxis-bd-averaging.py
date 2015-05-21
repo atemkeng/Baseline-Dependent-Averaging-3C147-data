@@ -2,6 +2,7 @@
 Module import here
 """
 import os
+import MSResampler_copy
 import sys
 import MSResampler
 import Pyxis
@@ -25,14 +26,16 @@ def simulate_imaging_bd_3c147 (hiresms=None, loresms=None, inputcolumn="DATA", o
 	"""	
 
 	# make an instance of the class containing the method for bd-averaging
-	mshi = MSResampler.MSResampler(hiresms+"/", column=inputcolumn)
+	mshi = MSResampler_copy.MSResampler(hiresms+"/", column=inputcolumn)
 	# BD-averaging, giving the integration time of the shortest baseline, dtime and 
 	# the number of uv-frequency bins dfreq to average
-	arrays = mshi.bd_averaging (dtime,dfreq)
+	psh=2
+	qsh=8
+	arrays = mshi.bd_averaging (dtime,dfreq,psh,qsh)
 	# arrays is of size (p,q,datacom,flagrowpq,weightpq)
 	# take the number of time bins of the longest baseline and make low res timeslots
-    	MSResampler.save_visibility_arrays (loresms,arrays,column=outputcolumn)
-  	imager.npix= 2048
+    	MSResampler_copy.save_visibility_arrays (loresms,arrays,column=outputcolumn)
+  	imager.npix= 2048#1024#2048
 	imager.cellsize = "2arcsec"
 	imager.stokes   = "I"
 	imager.weight   = "natural"
@@ -42,7 +45,7 @@ def simulate_imaging_bd_3c147 (hiresms=None, loresms=None, inputcolumn="DATA", o
 	imager.threshold = "5mJy"
 	imager.CLEAN_ALGORITHM = "csclean"
 	
-	imager.make_image(msname = loresms, column = outputcolumn, restore = True, dirty = False,  weight = "natural");
+	imager.make_image(msname = hiresms, column = outputcolumn, restore = True, dirty = False,  weight = "natural");
 
 
 def copy_column_ms(msname=None, inputcolumn='DATA', outputcolumn='CORRECTED_DATA'):

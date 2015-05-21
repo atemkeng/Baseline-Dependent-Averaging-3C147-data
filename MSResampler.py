@@ -95,7 +95,7 @@ class MSResampler (object):
       #t2.close()
       tab.close()
    
-    def bd_averaging (self,dtime,dfreq):
+    def bd_averaging (self,dtime,dfreq,psh,qsh):
       """Downsamples data using baseline dependent averaging. The compression is done over a boxcar window of size dfreqxdtimepq
       Returns list of (antenna1,antenna2,dtimepq,averaged_data) tuples, one per each baseline, where
       averaged_data has the shape (ntime/dtimepq,nfreq/dfreq,ncorr)."""
@@ -104,8 +104,9 @@ class MSResampler (object):
       nfreq1 = self.nfreq/dfreq;
       # make a list of per-baseline output arrays 
       result = [];
+      
       # shortest baseline length, longest baseline p=4 and q=17, VLA D configuration
-      lengthsh = np.sqrt((self.UVW[(self.A0==2)&(self.A1==8)]**2).sum(axis=1))[0];
+      lengthsh = np.sqrt((self.UVW[(self.A0==psh)&(self.A1==qsh)]**2).sum(axis=1))[0];
       # loop over each baseline
       # Evaluate the integration time for all baseline, given the one of the shortest baseline
       for p in range(self.na):
@@ -140,6 +141,7 @@ class MSResampler (object):
                 # make the number of bins to average be an odd number
                 dtimepq = dtimepq+1 if dtimepq%2==0 else dtimepq
 		dfreqpq = dfreqpq+1 if dfreqpq%2==0 else dfreqpq
+		#lengthdtdf.append((lengthpq,dtimepq,dfreqpq))
 		from time import gmtime, strftime
 		print """%s +++ Baseline Dependent Averaging: Baseline (%d,%d), integration =%ds, bandwidth =%.1fMHz 
 					this may take some time +++"""%(strftime("%Y-%m-%d %H:%M:%S", gmtime()),p,q,dtimepq,(dfreqpq*10))
@@ -213,7 +215,8 @@ class MSResampler (object):
 			flagfreqpqkept[data_desc_id==idw] = flagfreqpqid.copy()
           	# save the result
                 result.append((p,q,datacom,flagrowpq,weightpq,flagfreqpqkept));
-
+      np.save("lengthdtdf",lengthdtdf)
+      stop
       return result;
 
 
@@ -242,7 +245,7 @@ class MSResampler (object):
 	flagfreqkept[:,freqsliceflag2,...] = 1;
 	
 	# average were the hires visibities are not flag. flagfreqtoavg is the mask, average where flagfreqtoavg is False
-        datafreq_pq[:,freqslicedata,...] = np.mean(data_avg_freq*(flagfreqtoavg==False),axis=(1))\
+        datafreq_pq[:,freqslicedata,...] = np.mean(data_avg_freq,axis=(1))\
 					.reshape(data_avg_freq.shape[0],1,data_avg_freq.shape[2])
         
       if freq0 < datafreq_pq.shape[1]:
@@ -256,7 +259,7 @@ class MSResampler (object):
         flagfreqkept[:,freqsliceflag2,...] = 1;
 
 	# average were the hires visibities are not flag. flagfreqtoavg is the mask, average where flagfreqtoavg is False
-      	datafreq_pq[:,freqslicedata,...] = np.mean(data_avg_freq*(flagfreqtoavg==False),axis=(1))\
+      	datafreq_pq[:,freqslicedata,...] = np.mean(data_avg_freq,axis=(1))\
 		.reshape(data_avg_freq.shape[0],1,data_avg_freq.shape[2])
           
       return datafreq_pq, flagfreqkept;
