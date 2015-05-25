@@ -2,21 +2,21 @@
 Module import here
 """
 import os
-import MSResampler_copy
-import sys
+#import MSResampler_copy
+#import sys
 import MSResampler
 import Pyxis
-from Pyxis.ModSupport import *
-import mqt
+#from Pyxis.ModSupport import *
+#import mqt
 import pyrap.tables
 from pyrap.tables import table
 import numpy as np
-import ms
+#import ms
 import imager
-import scipy.special
-import pylab
-import pyfits
-import Tigger
+#import scipy.special
+#import pylab
+#import pyfits
+#import Tigger
 
 def simulate_imaging_bd_3c147 (hiresms=None, loresms=None, inputcolumn="DATA", outputcolumn="CORRECTED_DATA", dtime=None, dfreq=None):
 	"""
@@ -26,7 +26,7 @@ def simulate_imaging_bd_3c147 (hiresms=None, loresms=None, inputcolumn="DATA", o
 	"""	
 
 	# make an instance of the class containing the method for bd-averaging
-	mshi = MSResampler_copy.MSResampler(hiresms+"/", column=inputcolumn)
+	mshi = MSResampler.MSResampler(hiresms+"/", column=inputcolumn)
 	# BD-averaging, giving the integration time of the shortest baseline, dtime and 
 	# the number of uv-frequency bins dfreq to average
 	psh=2
@@ -34,7 +34,7 @@ def simulate_imaging_bd_3c147 (hiresms=None, loresms=None, inputcolumn="DATA", o
 	arrays = mshi.bd_averaging (dtime,dfreq,psh,qsh)
 	# arrays is of size (p,q,datacom,flagrowpq,weightpq)
 	# take the number of time bins of the longest baseline and make low res timeslots
-    	MSResampler_copy.save_visibility_arrays (loresms,arrays,column=outputcolumn)
+    	MSResampler.save_visibility_arrays (loresms,arrays,column=outputcolumn)
   	imager.npix= 2048#1024#2048
 	imager.cellsize = "2arcsec"
 	imager.stokes   = "I"
